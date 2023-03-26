@@ -1,6 +1,11 @@
 package com.example.javafxg6;
 
+import com.example.javafxg6.model.User;
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -12,10 +17,20 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
-public class SignUp extends Application {
+import java.io.*;
+import java.util.Date;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+public class SignUp extends Application {
+    public static final Pattern VALID_EMAIL_ADDRESS_REGEX =
+            Pattern.compile("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,6}$", Pattern.CASE_INSENSITIVE);
+    User user;
+
+    private String gender = "Male";
     @Override
     public void start(Stage stage) throws Exception {
+        user = new User();
         VBox root = new VBox();
         root.setAlignment(Pos.CENTER);
         root.setSpacing(15);
@@ -56,6 +71,18 @@ public class SignUp extends Application {
         rbMale.setToggleGroup(toggleGroup);
         rbFemale.setToggleGroup(toggleGroup);
 
+        toggleGroup.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
+            @Override
+            public void changed(ObservableValue<? extends Toggle> observableValue,
+                                Toggle toggle, Toggle t1) {
+                RadioButton radioButton =(RadioButton) t1.getToggleGroup().getSelectedToggle();
+                gender = radioButton.getText();
+                System.out.println(gender);
+
+            }
+        });
+
+
         hBox.getChildren().addAll(label1, rbMale, rbFemale);
         setNode(root, hBox);
 
@@ -64,6 +91,15 @@ public class SignUp extends Application {
         checkBox.setText("Agree the role");
         setNode(root, checkBox);
 
+
+        /*checkBox.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+
+            }
+        });
+        */
+
         Button button = new Button("SignUp");
         setNode(root, button);
 
@@ -71,9 +107,92 @@ public class SignUp extends Application {
         massageLabel.setFont(new Font(15));
         massageLabel.setTextFill(Color.RED);
         setNode(root, massageLabel);
+        button.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                String name = tfName.getText();
+                if (name.isEmpty()){
+                   massageLabel.setText("Plz enter user name");
+                   return;
+                }
+
+                String email = tfEmail.getText();
+                if (email.isEmpty()){
+                    massageLabel.setText("Plz enter user email");
+                    return;
+                }
+
+                if(!validate(email)){
+                    massageLabel.setText("Plz add valid email");
+                    return;
+                }
+
+                String password = pfPassword.getText();
+                if (password.isEmpty()){
+                    massageLabel.setText("Plz enter user password");
+                    return;
+                }
+
+                if(password.length()<6){
+                    massageLabel.setText("Plz add password up to 6 digits");
+                    return;
+                }
+
+                if (gender==null && gender.isEmpty()){
+                    massageLabel.setText("Plz select gender");
+                    return;
+                }
+
+                if(!checkBox.isSelected()){
+                    massageLabel.setText("Plz agree the role");
+                    return;
+                }
+                massageLabel.setText("");
+                Date date = new Date();
+
+                user = new User(name , email , password, gender , date);
+                System.out.println(user.toString());
+
+                addToFile(user , stage);
+            }
+        });
+
+
+
 
         stage.setScene(scene);
         stage.show();
+    }
+
+    private void addToFile(User user, Stage stage) {
+        try {
+            FileOutputStream fileOutputStream = new FileOutputStream("User.txt");
+            ObjectOutputStream stream = new ObjectOutputStream(fileOutputStream);
+            stream.writeObject(user);
+            stream.flush();
+            stream.close();
+
+            VBox vBox = new VBox();
+            vBox.setAlignment(Pos.CENTER);
+            Scene scene = new Scene(vBox, 500, 400);
+
+            Label label = new Label();
+            label.setText(user.toString());
+            vBox.getChildren().add(label);
+            stage.setScene(scene);
+
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+
+    public static boolean validate(String emailStr) {
+        Matcher matcher = VALID_EMAIL_ADDRESS_REGEX.matcher(emailStr);
+        return matcher.matches();
     }
 
     private static void setNode(VBox root, Node node) {
